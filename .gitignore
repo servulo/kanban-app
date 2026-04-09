@@ -1,3 +1,7 @@
+# VS Code / Visual Studio
+.vscode/
+.vs/
+
 #Maven
 target/
 pom.xml.tag
