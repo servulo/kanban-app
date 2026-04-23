@@ -1,0 +1,83 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - kanban-backend/**
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  acrLoginServer: sprjacr.azurecr.io
+  imageName: kanban-backend
+  containerAppName: sprj-ca-kanban-backend
+  resourceGroup: sprj-rg
+  azureServiceConnection: azure-sprj-sc
+
+stages:
+
+- stage: Build
+  displayName: Build e Push para ACR
+  jobs:
+  - job: BuildAndPush
+    displayName: Maven Build + Docker Push
+    steps:
+
+    - script: |
+        wget -q "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jdk/hotspot/normal/eclipse" -O /tmp/jdk25.tar.gz
+        mkdir -p /opt/jdk25
+        tar -xzf /tmp/jdk25.tar.gz -C /opt/jdk25 --strip-components=1
+        echo "##vso[task.setvariable variable=JAVA_HOME]/opt/jdk25"
+        echo "##vso[task.prependpath]/opt/jdk25/bin"
+      displayName: Instalar JDK 25 (Temurin)
+
+    - task: Maven@4
+      displayName: Maven Package
+      inputs:
+        mavenPomFile: kanban-backend/pom.xml
+        goals: package
+        options: -DskipTests
+        publishJUnitResults: false
+        javaHomeOption: Path
+        jdkDirectory: /opt/jdk25
+
+    - task: AzureCLI@2
+      displayName: Build e Push Docker para ACR
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az acr login --name sprjacr
+          docker build \
+            -f kanban-backend/src/main/docker/Dockerfile.jvm \
+            -t $(acrLoginServer)/$(imageName):$(Build.BuildId) \
+            -t $(acrLoginServer)/$(imageName):latest \
+            kanban-backend
+          docker push $(acrLoginServer)/$(imageName):$(Build.BuildId)
+          docker push $(acrLoginServer)/$(imageName):latest
+
+- stage: Deploy
+  displayName: Deploy no Container App
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: Deploy
+    displayName: Atualizar Container App
+    steps:
+
+    - task: AzureCLI@2
+      displayName: Deploy nova imagem
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az containerapp update \
+            --name $(containerAppName) \
+            --resource-group $(resourceGroup) \
+            --image $(acrLoginServer)/$(imageName):$(Build.BuildId) \
+            --registry-server $(acrLoginServer) \
+            --registry-identity system
