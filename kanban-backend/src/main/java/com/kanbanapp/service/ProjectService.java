@@ -39,18 +39,18 @@ public Project create(String name, String description, Long ownerId) {
         return Project.findByUserId(userId);
     }
 
-@Transactional
-public Project update(Long projectId, String name, String description, Long requesterId) {
-    Project project = Project.findById(projectId);
-    if (project == null) throw new NotFoundException("Projeto não encontrado");
-    checkAdmin(projectId, requesterId);
+    @Transactional
+    public Project update(Long projectId, String name, String description, Long requesterId) {
+        Project project = Project.findById(projectId);
+        if (project == null) throw new NotFoundException("Projeto não encontrado");
+        checkAdmin(projectId, requesterId);
 
-    project.name = name;
-    project.description = description;
+        project.name = name;
+        project.description = description;
 
-    // Recarrega para garantir relacionamentos populados
-    return Project.findById(projectId);
-}
+        // Recarrega para garantir relacionamentos populados
+        return Project.findById(projectId);
+    }
 
     @Transactional
     public void delete(Long projectId, Long requesterId) {
@@ -60,6 +60,7 @@ public Project update(Long projectId, String name, String description, Long requ
         project.delete();
     }
 
+    @Transactional
     public ProjectMember addMember(Long projectId, String email, String role, Long requesterId) {
         checkAdmin(projectId, requesterId);
         
