@@ -32,7 +32,8 @@ stages:
         goals: package
         options: -DskipTests
         publishJUnitResults: false
-        javaHomeOption: Default
+        javaHomeOption: JDKVersion
+        jdkVersionOption: default
 
     - task: AzureCLI@2
       displayName: Build e Push Docker para ACR
