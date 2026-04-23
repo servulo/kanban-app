@@ -17,6 +17,9 @@ public class CardService {
     @Inject
     ProjectService projectService;
 
+    @Inject
+    NotificationService notificationService;
+
     public List<Card> listByColumn(Long columnId, Long requesterId) {
         KanbanColumn column = KanbanColumn.findById(columnId);
         if (column == null) throw new NotFoundException("Coluna não encontrada");
@@ -49,6 +52,13 @@ public class CardService {
         }
 
         card.persist();
+
+        if (card.assignee != null) {
+            notificationService.createNotification(card.assignee.id, "CARD_ASSIGNED",
+                "Você foi atribuído ao card '" + card.title + "'",
+                card.id, "CARD");
+        }
+
         return Card.findById(card.id);
     }
 
@@ -58,6 +68,8 @@ public class CardService {
         Card card = Card.findById(cardId);
         if (card == null) throw new NotFoundException("Card não encontrado");
         projectService.checkMember(card.column.project.id, requesterId);
+
+        Long oldAssigneeId = card.assignee != null ? card.assignee.id : null;
 
         card.title = title;
         card.description = description;
@@ -76,6 +88,12 @@ public class CardService {
             card.dueDate = LocalDate.parse(dueDate);
         } else {
             card.dueDate = null;
+        }
+
+        if (card.assignee != null && !card.assignee.id.equals(oldAssigneeId)) {
+            notificationService.createNotification(card.assignee.id, "CARD_ASSIGNED",
+                "Você foi atribuído ao card '" + card.title + "'",
+                card.id, "CARD");
         }
 
         return Card.findById(cardId);
