@@ -70,6 +70,4 @@ stages:
           az containerapp update `
             --name $(containerAppName) `
             --resource-group $(resourceGroup) `
-            --image $(acrLoginServer)/$(imageName):$(Build.BuildId) `
-            --registry-server $(acrLoginServer) `
-            --registry-identity system
+            --image $(acrLoginServer)/$(imageName):$(Build.BuildId)
