@@ -8,7 +8,7 @@ public class CardDTO {
         public Long columnId;
         public String title;
         public String description;
-        public Long assigneeId;
+        public String assigneeId;
         public String dueDate;
         public String priority;
         public Integer position;
@@ -38,8 +38,7 @@ public class CardDTO {
         public String title;
         public String description;
         public Long columnId;
-        public Long assigneeId;
-        public String assigneeName;
+        public String assigneeId;
         public String dueDate;
         public String priority;
         public Integer position;
@@ -47,7 +46,7 @@ public class CardDTO {
         public List<AttachmentSummary> attachments;
 
         public CardResponse(Long id, String title, String description, Long columnId,
-                            Long assigneeId, String assigneeName, String dueDate,
+                            String assigneeId, String dueDate,
                             String priority, Integer position, String createdAt,
                             List<AttachmentSummary> attachments) {
             this.id = id;
@@ -55,7 +54,6 @@ public class CardDTO {
             this.description = description;
             this.columnId = columnId;
             this.assigneeId = assigneeId;
-            this.assigneeName = assigneeName;
             this.dueDate = dueDate;
             this.priority = priority;
             this.position = position;

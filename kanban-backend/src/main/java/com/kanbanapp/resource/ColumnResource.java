@@ -12,7 +12,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.util.List;
 
-@Path("/projects/{projectId}/columns")
+@Path("/v1/projects/{projectId}/columns")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("user")
@@ -24,8 +24,8 @@ public class ColumnResource {
     @Inject
     JsonWebToken jwt;
 
-    private Long currentUserId() {
-        return Long.parseLong(jwt.getSubject());
+    private String currentKeycloakId() {
+        return jwt.getSubject();
     }
 
     private ColumnDTO.ColumnResponse toResponse(KanbanColumn col) {
@@ -35,7 +35,7 @@ public class ColumnResource {
                         c.title,
                         c.priority,
                         c.position,
-                        c.assignee != null ? c.assignee.name : null,
+                        c.assigneeId,
                         c.dueDate != null ? c.dueDate.toString() : null
                 ))
                 .toList();
@@ -44,13 +44,13 @@ public class ColumnResource {
 
     @GET
     public List<ColumnDTO.ColumnResponse> list(@PathParam("projectId") Long projectId) {
-        return columnService.listByProject(projectId, currentUserId())
+        return columnService.listByProject(projectId, currentKeycloakId())
                 .stream().map(this::toResponse).toList();
     }
 
     @POST
     public Response create(@PathParam("projectId") Long projectId, ColumnDTO.CreateRequest request) {
-        KanbanColumn column = columnService.create(projectId, request.name, request.color, request.position, currentUserId());
+        KanbanColumn column = columnService.create(projectId, request.name, request.color, request.position, currentKeycloakId());
         return Response.status(Response.Status.CREATED).entity(toResponse(column)).build();
     }
 
@@ -59,7 +59,7 @@ public class ColumnResource {
     public Response update(@PathParam("projectId") Long projectId,
                            @PathParam("columnId") Long columnId,
                            ColumnDTO.CreateRequest request) {
-        KanbanColumn column = columnService.update(columnId, request.name, request.color, request.position, currentUserId());
+        KanbanColumn column = columnService.update(columnId, request.name, request.color, request.position, currentKeycloakId());
         return Response.ok(toResponse(column)).build();
     }
 
@@ -67,7 +67,7 @@ public class ColumnResource {
     @Path("/{columnId}")
     public Response delete(@PathParam("projectId") Long projectId,
                            @PathParam("columnId") Long columnId) {
-        columnService.delete(columnId, currentUserId());
+        columnService.delete(columnId, currentKeycloakId());
         return Response.noContent().build();
     }
 }

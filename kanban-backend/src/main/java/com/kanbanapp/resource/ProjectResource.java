@@ -14,7 +14,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import java.util.List;
 import java.util.Map;
 
-@Path("/projects")
+@Path("/v1/projects")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("user")
@@ -26,40 +26,40 @@ public class ProjectResource {
     @Inject
     JsonWebToken jwt;
 
-    private Long currentUserId() {
-        return Long.parseLong(jwt.getSubject());
+    private String currentKeycloakId() {
+        return jwt.getSubject();
     }
 
     private ProjectDTO.ProjectResponse toResponse(Project p) {
         List<ProjectDTO.MemberResponse> members = p.members.stream()
-                .map(m -> new ProjectDTO.MemberResponse(m.user.id, m.user.name, m.user.email, m.role))
+                .map(m -> new ProjectDTO.MemberResponse(m.keycloakId, m.role))
                 .toList();
-        return new ProjectDTO.ProjectResponse(p.id, p.name, p.description, p.owner.id, p.createdAt, members);
+        return new ProjectDTO.ProjectResponse(p.id, p.name, p.description, p.ownerId, p.createdAt, members);
     }
 
     @GET
     public List<ProjectDTO.ProjectResponse> list() {
-        return projectService.listByUser(currentUserId())
+        return projectService.listByKeycloakId(currentKeycloakId())
                 .stream().map(this::toResponse).toList();
     }
 
     @POST
     public Response create(ProjectDTO.CreateRequest request) {
-        Project project = projectService.create(request.name, request.description, currentUserId());
+        Project project = projectService.create(request.name, request.description, currentKeycloakId());
         return Response.status(Response.Status.CREATED).entity(toResponse(project)).build();
     }
 
     @PUT
     @Path("/{id}")
     public Response update(@PathParam("id") Long id, ProjectDTO.CreateRequest request) {
-        Project project = projectService.update(id, request.name, request.description, currentUserId());
+        Project project = projectService.update(id, request.name, request.description, currentKeycloakId());
         return Response.ok(toResponse(project)).build();
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) {
-        projectService.delete(id, currentUserId());
+        projectService.delete(id, currentKeycloakId());
         return Response.noContent().build();
     }
 
@@ -67,9 +67,10 @@ public class ProjectResource {
     @Path("/{id}/members")
     public Response addMember(@PathParam("id") Long id, Map<String, String> body) {
         try {
-            ProjectMember member = projectService.addMember(id, body.get("email"), body.get("role"), currentUserId());
+            ProjectMember member = projectService.addMember(
+                    id, body.get("keycloakId"), body.get("role"), currentKeycloakId());
             return Response.status(Response.Status.CREATED)
-                    .entity(new ProjectDTO.MemberResponse(member.user.id, member.user.name, member.user.email, member.role))
+                    .entity(new ProjectDTO.MemberResponse(member.keycloakId, member.role))
                     .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
@@ -77,9 +78,9 @@ public class ProjectResource {
     }
 
     @DELETE
-    @Path("/{id}/members/{userId}")
-    public Response removeMember(@PathParam("id") Long id, @PathParam("userId") Long userId) {
-        projectService.removeMember(id, userId, currentUserId());
+    @Path("/{id}/members/{keycloakId}")
+    public Response removeMember(@PathParam("id") Long id, @PathParam("keycloakId") String keycloakId) {
+        projectService.removeMember(id, keycloakId, currentKeycloakId());
         return Response.noContent().build();
     }
 }

@@ -2,10 +2,10 @@ package com.kanbanapp.service;
 
 import com.kanbanapp.entity.Card;
 import com.kanbanapp.entity.Notification;
-import com.kanbanapp.entity.User;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 
 import java.time.LocalDate;
@@ -15,13 +15,10 @@ import java.util.List;
 public class NotificationService {
 
     @Transactional
-    public Notification createNotification(Long userId, String type, String message,
-                                         Long relatedEntityId, String relatedEntityType) {
-        User user = User.findById(userId);
-        if (user == null) throw new NotFoundException("Usuário não encontrado");
-
+    public Notification createNotification(String keycloakId, String type, String message,
+                                           Long relatedEntityId, String relatedEntityType) {
         Notification notification = new Notification();
-        notification.user = user;
+        notification.keycloakId = keycloakId;
         notification.type = type;
         notification.message = message;
         notification.relatedEntityId = relatedEntityId;
@@ -31,45 +28,44 @@ public class NotificationService {
         return notification;
     }
 
-    public List<Notification> getNotifications(Long userId, Boolean unreadOnly) {
+    public List<Notification> getNotifications(String keycloakId, Boolean unreadOnly) {
         if (unreadOnly != null && unreadOnly) {
-            return Notification.findUnreadByUserId(userId);
+            return Notification.findUnreadByKeycloakId(keycloakId);
         } else {
-            return Notification.findByUserId(userId);
+            return Notification.findByKeycloakId(keycloakId);
         }
     }
 
     @Transactional
-    public void markAsRead(Long notificationId, Long userId) {
+    public void markAsRead(Long notificationId, String keycloakId) {
         Notification notification = Notification.findById(notificationId);
         if (notification == null) throw new NotFoundException("Notificação não encontrada");
-        if (!notification.user.id.equals(userId)) throw new jakarta.ws.rs.ForbiddenException("Acesso negado");
+        if (!notification.keycloakId.equals(keycloakId)) throw new ForbiddenException("Acesso negado");
 
         notification.isRead = true;
         notification.persist();
     }
 
     @Transactional
-    public void markAllAsRead(Long userId) {
-        List<Notification> unread = Notification.findUnreadByUserId(userId);
+    public void markAllAsRead(String keycloakId) {
+        List<Notification> unread = Notification.findUnreadByKeycloakId(keycloakId);
         for (Notification n : unread) {
             n.isRead = true;
             n.persist();
         }
     }
 
-    // Scheduled task to check for due dates approaching (e.g., tomorrow)
-    @Scheduled(every = "1h") // Run every hour
+    @Scheduled(every = "1h")
     @Transactional
     public void checkDueDates() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
-        List<Card> cards = Card.find("dueDate = ?1 and assignee is not null", tomorrow).list();
+        List<Card> cards = Card.find("dueDate = ?1 and assigneeId is not null", tomorrow).list();
 
         for (Card card : cards) {
-            // Check if notification already exists for this card and due date
-            long existingCount = Notification.count("relatedEntityId = ?1 and type = 'DUE_DATE'", card.id);
+            long existingCount = Notification.count(
+                "relatedEntityId = ?1 and type = 'DUE_DATE'", card.id);
             if (existingCount == 0) {
-                createNotification(card.assignee.id, "DUE_DATE",
+                createNotification(card.assigneeId, "DUE_DATE",
                     "O card '" + card.title + "' vence amanhã (" + card.dueDate + ")",
                     card.id, "CARD");
             }

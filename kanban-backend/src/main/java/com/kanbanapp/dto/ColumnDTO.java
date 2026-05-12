@@ -15,15 +15,15 @@ public class ColumnDTO {
         public String title;
         public String priority;
         public Integer position;
-        public String assigneeName;
+        public String assigneeId;
         public String dueDate;
 
-        public CardSummary(Long id, String title, String priority, Integer position, String assigneeName, String dueDate) {
+        public CardSummary(Long id, String title, String priority, Integer position, String assigneeId, String dueDate) {
             this.id = id;
             this.title = title;
             this.priority = priority;
             this.position = position;
-            this.assigneeName = assigneeName;
+            this.assigneeId = assigneeId;
             this.dueDate = dueDate;
         }
     }

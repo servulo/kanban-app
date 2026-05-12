@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.kanbanapp.entity.Project;
 import com.kanbanapp.entity.ProjectMember;
-import com.kanbanapp.entity.User;
 
 import io.quarkus.security.ForbiddenException;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -14,96 +13,85 @@ import jakarta.ws.rs.NotFoundException;
 @ApplicationScoped
 public class ProjectService {
 
-@Transactional
-public Project create(String name, String description, Long ownerId) {
-    User owner = User.findById(ownerId);
-    if (owner == null) throw new NotFoundException("Usuário não encontrado");
+    @Transactional
+    public Project create(String name, String description, String keycloakId) {
+        Project project = new Project();
+        project.name = name;
+        project.description = description;
+        project.ownerId = keycloakId;
+        project.persist();
 
-    Project project = new Project();
-    project.name = name;
-    project.description = description;
-    project.owner = owner;
-    project.persist();
+        ProjectMember member = new ProjectMember();
+        member.project = project;
+        member.keycloakId = keycloakId;
+        member.role = "ADMIN";
+        member.persist();
 
-    ProjectMember member = new ProjectMember();
-    member.project = project;
-    member.user = owner;
-    member.role = "ADMIN";
-    member.persist();
+        return Project.findById(project.id);
+    }
 
-    // Recarrega do banco para garantir que members está populado
-    return Project.findById(project.id);
-}
-
-    public List<Project> listByUser(Long userId) {
-        return Project.findByUserId(userId);
+    public List<Project> listByKeycloakId(String keycloakId) {
+        return Project.findByKeycloakId(keycloakId);
     }
 
     @Transactional
-    public Project update(Long projectId, String name, String description, Long requesterId) {
+    public Project update(Long projectId, String name, String description, String keycloakId) {
         Project project = Project.findById(projectId);
         if (project == null) throw new NotFoundException("Projeto não encontrado");
-        checkAdmin(projectId, requesterId);
+        checkAdmin(projectId, keycloakId);
 
         project.name = name;
         project.description = description;
 
-        // Recarrega para garantir relacionamentos populados
         return Project.findById(projectId);
     }
 
     @Transactional
-    public void delete(Long projectId, Long requesterId) {
+    public void delete(Long projectId, String keycloakId) {
         Project project = Project.findById(projectId);
         if (project == null) throw new NotFoundException("Projeto não encontrado");
-        checkAdmin(projectId, requesterId);
+        checkAdmin(projectId, keycloakId);
         project.delete();
     }
 
     @Transactional
-    public ProjectMember addMember(Long projectId, String email, String role, Long requesterId) {
-        checkAdmin(projectId, requesterId);
-        
-        User user = User.findByEmail(email);
-        if (user == null) throw new NotFoundException("Usuário não encontrado");
+    public ProjectMember addMember(Long projectId, String memberKeycloakId, String role, String requesterKeycloakId) {
+        checkAdmin(projectId, requesterKeycloakId);
 
         Project project = Project.findById(projectId);
+        if (project == null) throw new NotFoundException("Projeto não encontrado");
 
-        if(ProjectMember.findByProjectAndUser(projectId, user.id) != null) {
+        if (ProjectMember.findByProjectAndKeycloakId(projectId, memberKeycloakId) != null) {
             throw new IllegalArgumentException("Usuário já é membro do projeto");
         }
 
         ProjectMember member = new ProjectMember();
-
         member.project = project;
-        member.user = user;
+        member.keycloakId = memberKeycloakId;
         member.role = role != null ? role : "MEMBER";
-
         member.persist();
 
         return member;
-            
-     }
+    }
 
     @Transactional
-    public void removeMember(Long projectId, Long userId, Long requesterId) {
-        checkAdmin(projectId, requesterId);
-        ProjectMember member = ProjectMember.findByProjectAndUser(projectId, userId);
+    public void removeMember(Long projectId, String memberKeycloakId, String requesterKeycloakId) {
+        checkAdmin(projectId, requesterKeycloakId);
+        ProjectMember member = ProjectMember.findByProjectAndKeycloakId(projectId, memberKeycloakId);
         if (member == null) throw new NotFoundException("Membro não encontrado");
         member.delete();
-    }     
+    }
 
-    public void checkMember(Long projectId, Long userId) {
-        if(ProjectMember.findByProjectAndUser(projectId, userId) == null) {
+    public void checkMember(Long projectId, String keycloakId) {
+        if (ProjectMember.findByProjectAndKeycloakId(projectId, keycloakId) == null) {
             throw new ForbiddenException("Acesso negado ao projeto");
         }
     }
 
-    public void checkAdmin(Long projectId, Long userId) {
-        ProjectMember member = ProjectMember.findByProjectAndUser(projectId, userId);
-        if(member ==null || !"ADMIN".equals(member.role)) {
+    public void checkAdmin(Long projectId, String keycloakId) {
+        ProjectMember member = ProjectMember.findByProjectAndKeycloakId(projectId, keycloakId);
+        if (member == null || !"ADMIN".equals(member.role)) {
             throw new ForbiddenException("Apenas administradores podem executar essa ação");
         }
     }
-    
 }

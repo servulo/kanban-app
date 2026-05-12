@@ -12,7 +12,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.util.List;
 
-@Path("/cards")
+@Path("/v1/cards")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("user")
@@ -24,8 +24,8 @@ public class CardResource {
     @Inject
     JsonWebToken jwt;
 
-    private Long currentUserId() {
-        return Long.parseLong(jwt.getSubject());
+    private String currentKeycloakId() {
+        return jwt.getSubject();
     }
 
     private CardDTO.CardResponse toResponse(Card card) {
@@ -43,8 +43,7 @@ public class CardResource {
                 card.title,
                 card.description,
                 card.column.id,
-                card.assignee != null ? card.assignee.id : null,
-                card.assignee != null ? card.assignee.name : null,
+                card.assigneeId,
                 card.dueDate != null ? card.dueDate.toString() : null,
                 card.priority,
                 card.position,
@@ -56,16 +55,16 @@ public class CardResource {
     @GET
     @Path("/column/{columnId}")
     public List<CardDTO.CardResponse> listByColumn(@PathParam("columnId") Long columnId) {
-        return cardService.listByColumn(columnId, currentUserId())
+        return cardService.listByColumn(columnId, currentKeycloakId())
                 .stream().map(this::toResponse).toList();
     }
 
     @POST
     public Response create(CardDTO.CreateRequest request) {
         Card card = cardService.create(
-                request.columnId != null ? request.columnId : null,
+                request.columnId,
                 request.title, request.description, request.assigneeId,
-                request.dueDate, request.priority, request.position, currentUserId()
+                request.dueDate, request.priority, request.position, currentKeycloakId()
         );
         return Response.status(Response.Status.CREATED).entity(toResponse(card)).build();
     }
@@ -74,21 +73,21 @@ public class CardResource {
     @Path("/{id}")
     public Response update(@PathParam("id") Long id, CardDTO.CreateRequest request) {
         Card card = cardService.update(id, request.title, request.description,
-                request.assigneeId, request.dueDate, request.priority, request.position, currentUserId());
+                request.assigneeId, request.dueDate, request.priority, request.position, currentKeycloakId());
         return Response.ok(toResponse(card)).build();
     }
 
     @PATCH
     @Path("/{id}/move")
     public Response move(@PathParam("id") Long id, CardDTO.MoveRequest request) {
-        Card card = cardService.move(id, request.columnId, request.position, currentUserId());
+        Card card = cardService.move(id, request.columnId, request.position, currentKeycloakId());
         return Response.ok(toResponse(card)).build();
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) {
-        cardService.delete(id, currentUserId());
+        cardService.delete(id, currentKeycloakId());
         return Response.noContent().build();
     }
 }

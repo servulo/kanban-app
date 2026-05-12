@@ -1,7 +1,7 @@
 CREATE TABLE columns (
-    id         BIGSERIAL    PRIMARY KEY,
+    id         BIGINT       IDENTITY(1,1) PRIMARY KEY,
     project_id BIGINT       NOT NULL REFERENCES projects(id),
     name       VARCHAR(100) NOT NULL,
     color      VARCHAR(7),
-    position   INTEGER      NOT NULL
+    position   INT          NOT NULL
 );

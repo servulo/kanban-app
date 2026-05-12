@@ -1,15 +1,7 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: kanban-postgres
-    environment:
-      POSTGRES_DB: kanbandb
-      POSTGRES_USER: kanban
-      POSTGRES_PASSWORD: kanban123
-    ports:
-      - "5432:5432"
+  kanban-db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
+      - ./kanban-db-init.sh:/init.sh
+    entrypoint: ["/bin/bash", "/init.sh"]
+    restart: "no"

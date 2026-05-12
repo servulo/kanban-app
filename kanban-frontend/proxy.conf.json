@@ -1,0 +1,16 @@
+[
+  {
+    "context": ["/v1/auth", "/v1/admin", "/v1/users"],
+    "target": "http://localhost:8081",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  {
+    "context": ["/v1"],
+    "target": "http://localhost:8082",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+]

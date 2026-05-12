@@ -11,15 +11,11 @@ public class ProjectDTO {
     }
 
     public static class MemberResponse {
-        public Long userId;
-        public String name;
-        public String email;
+        public String keycloakId;
         public String role;
 
-        public MemberResponse(Long userId, String name, String email, String role) {
-            this.userId = userId;
-            this.name = name;
-            this.email = email;
+        public MemberResponse(String keycloakId, String role) {
+            this.keycloakId = keycloakId;
             this.role = role;
         }
     }
@@ -28,11 +24,12 @@ public class ProjectDTO {
         public Long id;
         public String name;
         public String description;
-        public Long ownerId;
+        public String ownerId;
         public LocalDateTime createdAt;
         public List<MemberResponse> members;
 
-        public ProjectResponse(Long id, String name, String description, Long ownerId, LocalDateTime createdAt, List<MemberResponse> members) {
+        public ProjectResponse(Long id, String name, String description, String ownerId,
+                               LocalDateTime createdAt, List<MemberResponse> members) {
             this.id = id;
             this.name = name;
             this.description = description;

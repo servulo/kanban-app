@@ -15,56 +15,48 @@ public class ColumnService {
 
     @Inject
     ProjectService projectService;
-    
-    public List<KanbanColumn> listByProject(Long projectId, Long requesterId) {
-        projectService.checkMember(projectId, requesterId);
+
+    public List<KanbanColumn> listByProject(Long projectId, String keycloakId) {
+        projectService.checkMember(projectId, keycloakId);
         return KanbanColumn.findByProjectId(projectId);
     }
 
     @Transactional
-    public KanbanColumn create(Long projectId, String name, String color, Integer position, Long requesterId) {
+    public KanbanColumn create(Long projectId, String name, String color, Integer position, String keycloakId) {
+        projectService.checkAdmin(projectId, keycloakId);
 
-        projectService.checkAdmin(projectId, requesterId);
-
-        Project project = Project.findById(requesterId);
-
+        Project project = Project.findById(projectId);
         if (project == null) throw new NotFoundException("Projeto não encontrado");
 
         KanbanColumn column = new KanbanColumn();
-
         column.project = project;
         column.name = name;
-        column.color = color != null ? color: "#CCCCCC";
-        column.position = position != null ? position: 0;
-        
+        column.color = color != null ? color : "#CCCCCC";
+        column.position = position != null ? position : 0;
         column.persist();
 
         return column;
     }
 
     @Transactional
-    public KanbanColumn update(Long columnId, String name, String color, Integer position, Long requesterId) {
-
+    public KanbanColumn update(Long columnId, String name, String color, Integer position, String keycloakId) {
         KanbanColumn column = KanbanColumn.findById(columnId);
-
         if (column == null) throw new NotFoundException("Coluna não encontrada");
 
-        projectService.checkAdmin(column.project.id, requesterId);
+        projectService.checkAdmin(column.project.id, keycloakId);
 
         column.name = name;
-        if(color != null) column.color = color;
-        if(position != null) column.position = position;
+        if (color != null) column.color = color;
+        if (position != null) column.position = position;
 
         return column;
-
     }
 
     @Transactional
-    public void delete(Long columnId, Long requesterId) {
+    public void delete(Long columnId, String keycloakId) {
         KanbanColumn column = KanbanColumn.findById(columnId);
         if (column == null) throw new NotFoundException("Coluna não encontrada");
-        projectService.checkAdmin(column.project.id, requesterId);
+        projectService.checkAdmin(column.project.id, keycloakId);
         column.delete();
     }
-    
 }

@@ -3,7 +3,6 @@ package com.kanbanapp.resource;
 import com.kanbanapp.dto.CardDTO;
 import com.kanbanapp.entity.Attachment;
 import com.kanbanapp.entity.Card;
-import com.kanbanapp.entity.User;
 import com.kanbanapp.service.ProjectService;
 import com.kanbanapp.service.StorageService;
 import jakarta.annotation.security.RolesAllowed;
@@ -23,7 +22,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 
-@Path("/cards/{cardId}/attachments")
+@Path("/v1/cards/{cardId}/attachments")
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed("user")
 public class AttachmentResource {
@@ -43,15 +42,15 @@ public class AttachmentResource {
     @Inject
     JsonWebToken jwt;
 
-    private Long currentUserId() {
-        return Long.parseLong(jwt.getSubject());
+    private String currentKeycloakId() {
+        return jwt.getSubject();
     }
 
     @GET
     public List<CardDTO.AttachmentSummary> list(@PathParam("cardId") Long cardId) {
         Card card = Card.findById(cardId);
         if (card == null) throw new NotFoundException("Card não encontrado");
-        projectService.checkMember(card.column.project.id, currentUserId());
+        projectService.checkMember(card.column.project.id, currentKeycloakId());
 
         return Attachment.findByCardId(cardId).stream()
                 .map(a -> new CardDTO.AttachmentSummary(
@@ -70,7 +69,7 @@ public class AttachmentResource {
         try {
             Card card = Card.findById(cardId);
             if (card == null) throw new NotFoundException("Card não encontrado");
-            projectService.checkMember(card.column.project.id, currentUserId());
+            projectService.checkMember(card.column.project.id, currentKeycloakId());
 
             if (form.file == null) {
                 return Response.status(Response.Status.BAD_REQUEST)
@@ -82,11 +81,9 @@ public class AttachmentResource {
             InputStream fileStream = new java.io.ByteArrayInputStream(fileBytes);
             String blobUrl = storageService.upload(fileName, fileStream, fileBytes.length, "application/octet-stream");
 
-            User uploader = User.findById(currentUserId());
-
             Attachment attachment = new Attachment();
             attachment.card = card;
-            attachment.uploadedBy = uploader;
+            attachment.uploadedBy = currentKeycloakId();
             attachment.fileName = fileName;
             attachment.blobUrl = blobUrl;
             attachment.persist();
@@ -114,7 +111,7 @@ public class AttachmentResource {
         Attachment attachment = Attachment.findById(attachmentId);
         if (attachment == null) throw new NotFoundException("Anexo não encontrado");
 
-        projectService.checkMember(attachment.card.column.project.id, currentUserId());
+        projectService.checkMember(attachment.card.column.project.id, currentKeycloakId());
         storageService.delete(attachment.blobUrl);
         attachment.delete();
 

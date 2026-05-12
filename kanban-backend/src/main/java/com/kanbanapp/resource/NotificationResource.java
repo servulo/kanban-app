@@ -13,7 +13,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Path("/notifications")
+@Path("/v1/notifications")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("user")
@@ -25,13 +25,13 @@ public class NotificationResource {
     @Inject
     JsonWebToken jwt;
 
-    private Long currentUserId() {
-        return Long.parseLong(jwt.getSubject());
+    private String currentKeycloakId() {
+        return jwt.getSubject();
     }
 
     @GET
     public List<NotificationDTO.NotificationResponse> getNotifications(@QueryParam("unreadOnly") Boolean unreadOnly) {
-        List<Notification> notifications = notificationService.getNotifications(currentUserId(), unreadOnly);
+        List<Notification> notifications = notificationService.getNotifications(currentKeycloakId(), unreadOnly);
         return notifications.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -40,14 +40,14 @@ public class NotificationResource {
     @PATCH
     @Path("/{id}/read")
     public Response markAsRead(@PathParam("id") Long id) {
-        notificationService.markAsRead(id, currentUserId());
+        notificationService.markAsRead(id, currentKeycloakId());
         return Response.ok().build();
     }
 
     @PATCH
     @Path("/read-all")
     public Response markAllAsRead() {
-        notificationService.markAllAsRead(currentUserId());
+        notificationService.markAllAsRead(currentKeycloakId());
         return Response.ok().build();
     }
 
